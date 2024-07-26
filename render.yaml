@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mamarbank
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn myproject.wsgi:application"
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: myproject.settings
+      - key: PYTHONPATH
+        value: /d/Mamar Bank
