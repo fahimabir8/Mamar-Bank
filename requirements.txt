@@ -2,7 +2,7 @@ asgiref
 certifi
 crispy-bootstrap5
 distlib
-Django>=5.0.6
+django
 django-crispy-forms
 django-environ
 django-phone-field
