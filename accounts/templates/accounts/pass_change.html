@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="bg-white px-3 py-4 rounded-xl my-6">
+    <form method="post" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <h1 class="font-bold text-3xl text-center pb-5">Change Your Password</h1>
+        {% csrf_token %}
+        
+        {% for field in form %}
+            <div class="mb-4 ">
+                <label class="block text-gray-700 text-m font-bold mb-2" for="{{ field.id_for_label }}">
+                    {{ field.label_tag }}
+                </label>
+                {{ field }}
+                {% if field.help_text %}
+                    <p class="text-xs italic text-gray-500">{{ field.help_text }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                    <p class="text-red-600 text-sm italic pb-2">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <div class="flex justify-center">
+            <button class="bg-yellow-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-5" type="submit">
+                Submit
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

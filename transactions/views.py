@@ -41,7 +41,7 @@ class TransactionCreateMixin(LoginRequiredMixin, CreateView):
         return kwargs
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs) # template e context data pass kora
+        context = super().get_context_data(**kwargs) 
         context.update({
             'title': self.title
         })
@@ -60,10 +60,7 @@ class DepositMoneyView(TransactionCreateMixin):
     def form_valid(self, form):
         amount = form.cleaned_data.get('amount')
         account = self.request.user.account
-        # if not account.initial_deposit_date:
-        #     now = timezone.now()
-        #     account.initial_deposit_date = now
-        account.balance += amount # amount = 200, tar ager balance = 0 taka new balance = 0+200 = 200
+        account.balance += amount 
         account.save(
             update_fields=[
                 'balance'
@@ -91,8 +88,6 @@ class WithdrawMoneyView(TransactionCreateMixin):
         amount = form.cleaned_data.get('amount')
 
         self.request.user.account.balance -= form.cleaned_data.get('amount')
-        # balance = 300
-        # amount = 5000
         self.request.user.account.save(update_fields=['balance'])
 
         messages.success(
@@ -150,7 +145,7 @@ class TransactionReportView(LoginRequiredMixin, ListView):
         else:
             self.balance = self.request.user.account.balance
        
-        return queryset.distinct() # unique queryset hote hobe
+        return queryset.distinct() 
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -167,9 +162,6 @@ class PayLoanView(LoginRequiredMixin, View):
         print(loan)
         if loan.loan_approve:
             user_account = loan.account
-                # Reduce the loan amount from the user's balance
-                # 5000, 500 + 5000 = 5500
-                # balance = 3000, loan = 5000
             if loan.amount < user_account.balance:
                 user_account.balance -= loan.amount
                 loan.balance_after_transaction = user_account.balance
@@ -190,7 +182,7 @@ class PayLoanView(LoginRequiredMixin, View):
 class LoanListView(LoginRequiredMixin,ListView):
     model = Transaction
     template_name = 'transactions/loan_request.html'
-    context_object_name = 'loans' # loan list ta ei loans context er moddhe thakbe
+    context_object_name = 'loans' 
     
     def get_queryset(self):
         user_account = self.request.user.account
