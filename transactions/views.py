@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect,render
 from django.views import View
 from django.http import HttpResponse
 from django.views.generic import CreateView, ListView
@@ -13,6 +13,7 @@ from transactions.forms import (
     DepositForm,
     WithdrawForm,
     LoanRequestForm,
+    TransferForm
 )
 from transactions.models import Transaction
 from django.core.mail import EmailMessage,EmailMultiAlternatives
@@ -41,7 +42,7 @@ class TransactionCreateMixin(LoginRequiredMixin, CreateView):
         return kwargs
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs) # template e context data pass kora
+        context = super().get_context_data(**kwargs) 
         context.update({
             'title': self.title
         })
@@ -60,10 +61,7 @@ class DepositMoneyView(TransactionCreateMixin):
     def form_valid(self, form):
         amount = form.cleaned_data.get('amount')
         account = self.request.user.account
-        # if not account.initial_deposit_date:
-        #     now = timezone.now()
-        #     account.initial_deposit_date = now
-        account.balance += amount # amount = 200, tar ager balance = 0 taka new balance = 0+200 = 200
+        account.balance += amount 
         account.save(
             update_fields=[
                 'balance'
@@ -89,17 +87,14 @@ class WithdrawMoneyView(TransactionCreateMixin):
 
     def form_valid(self, form):
         amount = form.cleaned_data.get('amount')
-
         self.request.user.account.balance -= form.cleaned_data.get('amount')
-        # balance = 300
-        # amount = 5000
         self.request.user.account.save(update_fields=['balance'])
 
         messages.success(
             self.request,
             f'Successfully withdrawn {"{:,.2f}".format(float(amount))}$ from your account'
         )
-
+        
         send_transaction_email(self.request.user, amount, "Withdrawal Message" , "transactions/withdrawal_email.html")
         
         return super().form_valid(form)
@@ -130,7 +125,7 @@ class LoanRequestView(TransactionCreateMixin):
 class TransactionReportView(LoginRequiredMixin, ListView):
     template_name = 'transactions/transaction_report.html'
     model = Transaction
-    balance = 0 # filter korar pore ba age amar total balance ke show korbe
+    balance = 0 
     
     def get_queryset(self):
         queryset = super().get_queryset().filter(
@@ -150,7 +145,7 @@ class TransactionReportView(LoginRequiredMixin, ListView):
         else:
             self.balance = self.request.user.account.balance
        
-        return queryset.distinct() # unique queryset hote hobe
+        return queryset.distinct() 
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -167,9 +162,7 @@ class PayLoanView(LoginRequiredMixin, View):
         print(loan)
         if loan.loan_approve:
             user_account = loan.account
-                # Reduce the loan amount from the user's balance
-                # 5000, 500 + 5000 = 5500
-                # balance = 3000, loan = 5000
+                
             if loan.amount < user_account.balance:
                 user_account.balance -= loan.amount
                 loan.balance_after_transaction = user_account.balance
@@ -190,10 +183,55 @@ class PayLoanView(LoginRequiredMixin, View):
 class LoanListView(LoginRequiredMixin,ListView):
     model = Transaction
     template_name = 'transactions/loan_request.html'
-    context_object_name = 'loans' # loan list ta ei loans context er moddhe thakbe
+    context_object_name = 'loans' 
     
     def get_queryset(self):
         user_account = self.request.user.account
         queryset = Transaction.objects.filter(account=user_account,transaction_type=3)
         print(queryset)
         return queryset
+    
+
+class TransferMoneyView(View):
+    form_class = TransferForm
+    template_name = 'transactions/transfer_form.html'
+    
+    def get(self, request, *args, **kwargs):
+        form = self.form_class(sender_account = request.user.account)
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST, sender_account = request.user.account)
+        if form.is_valid():
+            sender_account = request.user.account
+            recipient_account = form.recipient_account
+            amount = form.cleaned_data['amount']
+
+            # Deduct the amount from the sender's account
+            sender_account.balance -= amount
+            sender_account.save(update_fields=['balance'])
+
+            # Add the amount to the recipient's account
+            recipient_account.balance += amount
+            recipient_account.save(update_fields=['balance'])
+
+            # Record the transaction for both sender and recipient
+            Transaction.objects.create(
+                account=sender_account,
+                amount=-amount,
+                balance_after_transaction=sender_account.balance,
+                transaction_type=WITHDRAWAL,  # Replace with your transaction type constant
+                loan_approve=False
+            )
+            Transaction.objects.create(
+                account=recipient_account,
+                amount=amount,
+                balance_after_transaction=recipient_account.balance,
+                transaction_type=WITHDRAWAL,  # Replace with your transaction type constant
+                loan_approve=False
+            )
+
+            messages.success(request, f'Successfully transferred {"{:,.2f}".format(float(amount))}$ to account {recipient_account.account_no}.')
+            return redirect('transaction_report')  # Replace with a safe URL after transfer
+
+        return render(request, self.template_name, {'form': form})

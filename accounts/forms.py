@@ -4,6 +4,7 @@ from django import forms
 from .constants import ACCOUNT_TYPE, GENDER_TYPE
 from django.contrib.auth.models import User
 from .models import UserBankAccount, UserAddress
+from core.models import Bank
 
 class UserRegistrationForm(UserCreationForm):
     birth_date = forms.DateField(widget=forms.DateInput(attrs={'type':'date'}))
@@ -37,13 +38,21 @@ class UserRegistrationForm(UserCreationForm):
                 city = city,
                 street_address = street_address
             )
+            
+            bank, created = Bank.objects.get_or_create(
+                id = 1, defaults = {'user': our_user}
+            )
+            
+            
             UserBankAccount.objects.create(
                 user = our_user,
                 account_type  = account_type,
                 gender = gender,
                 birth_date =birth_date,
+                bank = bank,
                 account_no = 100000+ our_user.id
             )
+            
         return our_user
     
     def __init__(self, *args, **kwargs):
@@ -122,3 +131,5 @@ class UserUpdateForm(forms.ModelForm):
             user_address.save()
 
         return user
+
+
