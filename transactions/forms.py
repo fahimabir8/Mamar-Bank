@@ -1,6 +1,6 @@
 from django import forms
 from .models import Transaction
-from accounts.models import UserBankAccount
+
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
@@ -25,7 +25,7 @@ class DepositForm(TransactionForm):
             raise forms.ValidationError(
                 f'You need to deposit at least {min_deposit_amount}$'
             )
-                
+            
         return amount 
     
     
@@ -36,12 +36,6 @@ class WithdrawForm(TransactionForm):
         max_withdraw_amount = 2000000
         balance = account.balance 
         amount = self.cleaned_data.get('amount')
-        
-        if self.account.bank.bankruptcy:
-            raise forms.ValidationError(
-                f'Sorry. You cannot withdraw as the bank is bankrupt.'
-            )
-            
         if amount < min_withdraw_amount:
             raise forms.ValidationError(
                 f'You can withdraw at least {min_withdraw_amount} $'
@@ -56,7 +50,6 @@ class WithdrawForm(TransactionForm):
                 'You can not withdraw more than your account balance'            
             )
                 
-        
         return amount 
     
 class LoanRequestForm(TransactionForm):
@@ -64,28 +57,3 @@ class LoanRequestForm(TransactionForm):
         amount = self.cleaned_data.get('amount')
         return amount 
     
-
-
-class TransferForm(forms.Form):
-    recipient_account_no = forms.IntegerField(label="Recipient Account Number")
-    amount = forms.DecimalField(max_digits=12, decimal_places=2, label="Amount")
-
-    def __init__(self, *args, **kwargs):
-        self.sender_account = kwargs.pop('sender_account')
-        super().__init__(*args, **kwargs)
-
-    def clean_recipient_account_no(self):
-        recipient_account_no = self.cleaned_data.get('recipient_account_no')
-        try:
-            self.recipient_account = UserBankAccount.objects.get(account_no=recipient_account_no)
-        except UserBankAccount.DoesNotExist:
-            raise forms.ValidationError('Recipient account does not exist.')
-        return recipient_account_no
-
-    def clean_amount(self):
-        amount = self.cleaned_data.get('amount')
-        if amount < 2000:
-            raise forms.ValidationError('The amount must be greater than 2000.')
-        if amount > self.sender_account.balance:
-            raise forms.ValidationError('You donot have enough balance in your account.')
-        return amount
