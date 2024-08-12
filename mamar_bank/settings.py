@@ -107,7 +107,7 @@ WSGI_APPLICATION = 'mamar_bank.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         # Replace this value with your local database's connection string.
-        default='postgresql://mamarbank_l3qa_user:IyA0EiCEOg0tPlF8Ga0nqxhXZBb3K4ex@dpg-cqhadelsvqrc73cd3p70-a.oregon-postgres.render.com/mamarbank_l3qa',
+        default='postgres://avnadmin:AVNS_EdoaR6_ng6UoE1NKaT7@ancestra-library-ancestra-library.e.aivencloud.com:18935/defaultdb?sslmode=require',
         
     )
 }

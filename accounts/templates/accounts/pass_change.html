@@ -12,9 +12,7 @@
                     {{ field.label_tag }}
                 </label>
                 {{ field }}
-                {% if field.help_text %}
-                    <p class="text-xs italic text-gray-500">{{ field.help_text }}</p>
-                {% endif %}
+           
                 {% for error in field.errors %}
                     <p class="text-red-600 text-sm italic pb-2">{{ error }}</p>
                 {% endfor %}

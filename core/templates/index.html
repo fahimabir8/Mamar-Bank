@@ -11,9 +11,11 @@
             This is a simple Mamar Bank where you can deposit money, withdraw money, take loan. You can also create an account, login, logout. Let integrate your life through the unshackled paths lies ahead.
 
         </p>
+        {% if not user.is_authenticated  %}
         <div class="flex justify-end w-full">
             <a href="{% url 'register' %}" class="bg-blue-900 text-white rounded-none hover:bg-white hover:text-blue-900 hover:border-blue-900 shadow hover:shadow-lg py-2 px-4 border border-gray-900 hover:border-transparent">Register</a>
         </div>
+        {% endif %}
     </div>
     <div class="w-full lg:w-1/2 lg:py-6 text-center ">
         <img class ="rounded-2xl" src ="{% static './img/bank.jpg' %}"/>

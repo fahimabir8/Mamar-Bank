@@ -5,14 +5,17 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.http import HttpResponse
-from django.views.generic import CreateView, ListView
-from transactions.constants import DEPOSIT, WITHDRAWAL,LOAN, LOAN_PAID
+from django.views.generic import CreateView, ListView, FormView
+from transactions.constants import DEPOSIT, WITHDRAWAL,LOAN, LOAN_PAID, TRANSFER
 from datetime import datetime
+from django.db import transaction
 from django.db.models import Sum
+from accounts.models import UserBankAccount
 from transactions.forms import (
     DepositForm,
     WithdrawForm,
     LoanRequestForm,
+    TransferForm,
 )
 from transactions.models import Transaction
 from django.core.mail import EmailMessage,EmailMultiAlternatives
@@ -98,6 +101,66 @@ class WithdrawMoneyView(TransactionCreateMixin):
         send_transaction_email(self.request.user, amount, "Withdrawal Message" , "transactions/withdrawal_email.html")
         
         return super().form_valid(form)
+
+
+class TransferView(TransactionCreateMixin):
+    title = 'Transfer Money'
+    form_class = TransferForm
+    
+    def get_initial(self):
+        initial = {'transaction_type': TRANSFER}
+        return initial
+
+    def form_valid(self, form):
+        amount = form.cleaned_data.get('amount')
+        account_no = form.cleaned_data.get('account_number')
+        
+           
+        sender_account = self.request.user.account
+        try:   
+            receiver_account = UserBankAccount.objects.get(account_no = account_no)
+        except UserBankAccount.DoesNotExist:
+            messages.error(self.request, f"Please provide a valid account number.")
+            return redirect('transfer')
+        
+        sender_account.balance -= amount
+        receiver_account.balance += amount
+                
+        sender_account.save(update_fields = ['balance'])
+        receiver_account.save(update_fields = ['balance'])
+        
+        Transaction.objects.create(
+            account = sender_account,
+            amount = amount,
+            account_number = sender_account.account_no,
+            balance_after_transaction = sender_account.balance,
+            transaction_type = TRANSFER,   
+        )
+        
+        Transaction.objects.create(
+            account = receiver_account,
+            amount = amount,
+            account_number = account_no,
+            balance_after_transaction = receiver_account.balance,
+            transaction_type = TRANSFER,   
+        )
+        
+        messages.success(
+            self.request,
+            f'Successfully Transferred {"{:,.2f}".format(float(amount))}$ from your account'
+        )
+        
+        send_transaction_email(self.request.user, amount, "Transfer Send Message", 'transactions/transfer_send.html')
+        send_transaction_email(receiver_account.user, amount, "Transfer Receive Message", 'transactions/transfer_receive.html')
+
+        return super().form_valid(form)
+    
+    def form_invalid(self,form):
+        messages.error(
+            self.request,
+            f'Your informations are incorrect'
+        )
+        return super().form_invalid(form)
 
 class LoanRequestView(TransactionCreateMixin):
     form_class = LoanRequestForm
